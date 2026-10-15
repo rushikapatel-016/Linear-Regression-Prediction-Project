@@ -1,0 +1,476 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Clothing Demand Predictor</title>
+
+    <!-- Chart.js library for the dynamic graph -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 25px;
+            font-family: Arial, sans-serif;
+            background: #f1f3f9;
+            color: #222;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: auto;
+            padding: 35px;
+            background: white;
+            border-radius: 14px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        h1 {
+            text-align: center;
+            color: #3155a4;
+            margin-bottom: 12px;
+        }
+
+        .subtitle {
+            text-align: center;
+            font-size: 18px;
+            line-height: 1.5;
+            margin-bottom: 25px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 22px;
+        }
+
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 9px;
+            font-size: 17px;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 14px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 16px;
+            background: white;
+        }
+
+        .season-note {
+            margin-top: 9px;
+            color: #666;
+            font-size: 14px;
+        }
+
+        button {
+            width: 100%;
+            padding: 16px;
+            margin-top: 28px;
+            border: none;
+            border-radius: 8px;
+            background: #263f80;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #1c3065;
+        }
+
+        button:disabled {
+            opacity: 0.7;
+            cursor: wait;
+        }
+
+        #result {
+            display: none;
+            margin-top: 22px;
+            padding: 18px;
+            background: #edf2ff;
+            border-radius: 10px;
+            font-size: 18px;
+            line-height: 1.5;
+        }
+
+        #chartSection {
+            display: none;
+            margin-top: 28px;
+            padding: 20px;
+            border: 1px solid #e2e6ef;
+            border-radius: 12px;
+        }
+
+        #chartSection h2 {
+            text-align: center;
+            color: #263f80;
+            font-size: 22px;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 320px;
+            width: 100%;
+        }
+
+        .footer {
+            margin-top: 22px;
+            color: #666;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        @media (max-width: 600px) {
+            body {
+                padding: 12px;
+            }
+
+            .container {
+                padding: 22px 16px;
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+                gap: 18px;
+            }
+
+            .chart-container {
+                height: 270px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+
+        <h1>Clothing Demand Predictor</h1>
+
+        <p class="subtitle">
+            Enter clothing and marketing details to estimate
+            the number of units that may be sold.
+        </p>
+
+        <form id="predictionForm">
+
+            <div class="form-grid">
+
+                <div>
+                    <label for="price">Price (₹)</label>
+                    <input
+                        type="number"
+                        id="price"
+                        min="0.01"
+                        step="any"
+                        value="250"
+                        required
+                    >
+                </div>
+
+                <div>
+                    <label for="discount_percent">Discount (%)</label>
+                    <input
+                        type="number"
+                        id="discount_percent"
+                        min="0"
+                        max="100"
+                        step="any"
+                        value="2"
+                        required
+                    >
+                </div>
+
+                <div>
+                    <label for="previous_sales">Previous Sales (units)</label>
+                    <input
+                        type="number"
+                        id="previous_sales"
+                        min="0"
+                        step="any"
+                        value="34"
+                        required
+                    >
+                </div>
+
+                <div>
+                    <label for="advertising_spend">
+                        Advertising Spend (₹)
+                    </label>
+                    <input
+                        type="number"
+                        id="advertising_spend"
+                        min="0"
+                        step="any"
+                        value="150"
+                        required
+                    >
+                </div>
+
+                <div>
+                    <label for="season_demand_index">
+                        Seasonal Demand
+                    </label>
+
+                    <select id="season_demand_index" required>
+                        <option value="0.7">Low</option>
+                        <option value="1.0" selected>Average</option>
+                        <option value="1.3">High</option>
+                    </select>
+
+                    <p class="season-note" id="seasonNote">
+                        Average demand has an index of 1.00.
+                    </p>
+                </div>
+
+            </div>
+
+            <button type="submit" id="predictButton">
+                Predict Units Sold
+            </button>
+
+        </form>
+
+        <div id="result" role="status" aria-live="polite"></div>
+
+        <!-- Dynamic prediction graph -->
+        <section id="chartSection">
+            <h2>Predicted Clothing Demand</h2>
+
+            <div class="chart-container">
+                <canvas
+                    id="predictionChart"
+                    role="img"
+                    aria-label="Bar graph of predicted clothing units sold"
+                ></canvas>
+            </div>
+        </section>
+
+        <p class="footer">
+            Predictions are estimates based on a synthetic educational
+            dataset and are not a guarantee of actual sales.
+        </p>
+
+    </div>
+
+    <script>
+        const form = document.getElementById("predictionForm");
+        const button = document.getElementById("predictButton");
+        const result = document.getElementById("result");
+        const chartSection = document.getElementById("chartSection");
+        const seasonSelect = document.getElementById("season_demand_index");
+        const seasonNote = document.getElementById("seasonNote");
+
+        let predictionChart = null;
+
+        // Update the seasonal demand explanation.
+        seasonSelect.addEventListener("change", function () {
+            const index = Number(this.value);
+
+            const descriptions = {
+                "0.7": "Low demand has an index of 0.70.",
+                "1": "Average demand has an index of 1.00.",
+                "1.3": "High demand has an index of 1.30."
+            };
+
+            seasonNote.textContent = descriptions[index] ||
+                `Demand index: ${index.toFixed(2)}.`;
+        });
+
+        // Create the graph or update the existing graph.
+        function updateChart(predictedUnits) {
+            const ctx = document
+                .getElementById("predictionChart")
+                .getContext("2d");
+
+            chartSection.style.display = "block";
+
+            if (predictionChart) {
+                predictionChart.data.datasets[0].data = [predictedUnits];
+                predictionChart.update();
+            } else {
+                predictionChart = new Chart(ctx, {
+                    type: "bar",
+
+                    data: {
+                        labels: ["Predicted Units Sold"],
+
+                        datasets: [{
+                            label: "Estimated Units",
+                            data: [predictedUnits],
+                            backgroundColor: "#526fc5",
+                            borderColor: "#263f80",
+                            borderWidth: 2,
+                            borderRadius: 8,
+                            maxBarThickness: 160
+                        }]
+                    },
+
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+
+                        animation: {
+                            duration: 700
+                        },
+
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: "top"
+                            },
+
+                            tooltip: {
+                                callbacks: {
+                                    label: function (context) {
+                                        return "Estimated units: " +
+                                            context.parsed.y;
+                                    }
+                                }
+                            }
+                        },
+
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: "Number of Units"
+                                },
+                                ticks: {
+                                    precision: 0
+                                }
+                            },
+
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: "Prediction"
+                                }
+                            }
+                        }
+                    },
+
+                    plugins: [{
+                        id: "barValueLabel",
+
+                        afterDatasetsDraw(chart) {
+                            const { ctx } = chart;
+
+                            ctx.save();
+                            ctx.font = "bold 16px Arial";
+                            ctx.fillStyle = "#263f80";
+                            ctx.textAlign = "center";
+
+                            const meta = chart.getDatasetMeta(0);
+
+                            meta.data.forEach((bar, index) => {
+                                const value =
+                                    chart.data.datasets[0].data[index];
+
+                                ctx.fillText(
+                                    value.toLocaleString(),
+                                    bar.x,
+                                    Math.max(bar.y - 10, 18)
+                                );
+                            });
+
+                            ctx.restore();
+                        }
+                    }]
+                });
+            }
+        }
+
+        // Send input values to the Flask prediction API.
+        form.addEventListener("submit", async function (event) {
+            event.preventDefault();
+
+            button.disabled = true;
+            button.textContent = "Predicting...";
+            result.style.display = "none";
+
+            const inputData = {
+                price: Number(document.getElementById("price").value),
+                discount_percent: Number(
+                    document.getElementById("discount_percent").value
+                ),
+                previous_sales: Number(
+                    document.getElementById("previous_sales").value
+                ),
+                advertising_spend: Number(
+                    document.getElementById("advertising_spend").value
+                ),
+                season_demand_index: Number(seasonSelect.value)
+            };
+
+            try {
+                const response = await fetch("/predict", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(inputData)
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(
+                        data.error || data.message || "Prediction failed."
+                    );
+                }
+
+                const predictedUnits = Number(
+                    data.predicted_units_sold
+                );
+
+                if (!Number.isFinite(predictedUnits)) {
+                    throw new Error(
+                        "The server did not return a valid prediction."
+                    );
+                }
+
+                const roundedUnits = Math.max(
+                    0,
+                    Math.round(predictedUnits)
+                );
+
+                result.textContent =
+                    `Estimated Units Sold: ${roundedUnits}. ` +
+                    "This is an estimated demand, not a guarantee.";
+
+                result.style.display = "block";
+
+                // Display the actual result returned by the model.
+                updateChart(roundedUnits);
+
+            } catch (error) {
+                result.textContent =
+                    "Error: " + error.message +
+                    " Please check that the Flask server is running.";
+
+                result.style.display = "block";
+                chartSection.style.display = "none";
+
+                console.error("Prediction error:", error);
+
+            } finally {
+                button.disabled = false;
+                button.textContent = "Predict Units Sold";
+            }
+        });
+    </script>
+</body>
+</html>
+```
